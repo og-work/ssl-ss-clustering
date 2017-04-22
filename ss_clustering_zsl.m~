@@ -3,9 +3,9 @@ clc;
 clear
 close all;
 
-% 1: Linux Laptop
-% 2: Windows laptop
-% 3: Linux Desktop
+% 1: Linux Laptop 
+% 2: Windows laptop 
+% 3: Linux Desktop 
 % 4: Windows Desktop
 SYSTEM_PLATFORM = 1;
 BASE_PATH = '';
@@ -13,7 +13,7 @@ listDatasets = {'AwA', 'Pascal-Yahoo'};
 DATASET_ID = 2;
 DATASET = listDatasets{DATASET_ID};
 %Enable/add required tool boxes
-addPath = 1;
+addPath = 0;
 BASE_PATH = functionSemantic_similaity_env_setup(SYSTEM_PLATFORM, addPath);
 
 %% START >> Load data
@@ -93,53 +93,54 @@ listFileNamesMappedAttributesLabels = {'awa_mappedAllAttributeLabels', 'apy_mapp
 fileNameMappedAttributes = listFileNamesMappedAttributes{DATASET_ID};
 fileNameMappedAttributesLabels = listFileNamesMappedAttributesLabels{DATASET_ID};
 
-if ~exist(fullfile(sprintf('%s/%s.mat', dataset_path, fileNameMappedAttributes)),'file')    
-    for ind = 1:1%length(datasetLabels) - leaveKOut;
-        leaveOutDatasetLabels = labelsTrainingData;
-        %Assign 0 label for left out samples
-        leaveOutDatasetLabels((ind - 1)*leaveKOut + 1 : (ind - 1)*leaveKOut + leaveKOut) = 0;
-        %Find array of 0-1 in which 0 corresponds to left out sample
-        tempB = (leaveOutDatasetLabels~=0);
-        %create new labels array contianing only non-left-out samples
-        leaveOutDatasetLabels = leaveOutDatasetLabels(tempB == 1);
-        %create new data contianing only non-left-out samples
-        %leaveOutData = vggFeatures(:,find(tempB == 1));
-        leaveOutData = kernelData(tempB, tempB);
-        %Prepare attribute matrix which contains attribute vec for each data
-        %point in leaveOutData
-        attributesMat = [];
-        mappedAttributeLabels = [];
-        
-        for c_tr = 1:length(defaultTrainClassLabels)
-            % Extract Features for each train class
-            % temp.currentClassName = Data.ClassLabelsPhrase{Para.idx_TrainingSet(c_tr)};
-            numberOfSamplesOfClass = sum(leaveOutDatasetLabels==defaultTrainClassLabels(c_tr));
-            attributesMat = [attributesMat; repmat(attributes(:, defaultTrainClassLabels(c_tr))', numberOfSamplesOfClass, 1)];
-            %tr_sample_ind = tr_sample_ind + tr_sample_class_ind;
-            mappedAttributeLabels = [mappedAttributeLabels; defaultTrainClassLabels(c_tr) * ones(numberOfSamplesOfClass, 1)];
-        end
-        
-        %Train regressor
-        mappedAttributes = functionTrainRegressor(leaveOutData', leaveOutDatasetLabels, attributesMat, BASE_PATH);
-        mappedAllAttributes = [mappedAllAttributes; mappedAttributes];
-        mappedAllAttributeLabels = [mappedAllAttributeLabels; mappedAttributeLabels];
-        leaveOutDatasetLabels = [];
-        tempB = [];
-        leaveOutData = [];
-        attributesMat = [];
-        mappedAttributeLabels = [];
-        save(sprintf('%s/%s.mat',dataset_path, fileNameMappedAttributes), 'mappedAllAttributes');
-        save(sprintf('%s/%s.mat',dataset_path, fileNameMappedAttributesLabels), 'mappedAllAttributeLabels');    
-    end    
+if ~exist(fullfile(sprintf('%s/%s.mat', dataset_path, fileNameMappedAttributes)),'file')
+for ind = 1:1%length(datasetLabels) - leaveKOut;
+    leaveOutDatasetLabels = labelsTrainingData;
+    %Assign 0 label for left out samples
+    leaveOutDatasetLabels((ind - 1)*leaveKOut + 1 : (ind - 1)*leaveKOut + leaveKOut) = 0;
+    %Find array of 0-1 in which 0 corresponds to left out sample
+    tempB = (leaveOutDatasetLabels~=0);
+    %create new labels array contianing only non-left-out samples
+    leaveOutDatasetLabels = leaveOutDatasetLabels(tempB == 1);
+    %create new data contianing only non-left-out samples
+    %leaveOutData = vggFeatures(:,find(tempB == 1));
+    leaveOutData = kernelData(tempB, tempB);
+    %Prepare attribute matrix which contains attribute vec for each data
+    %point in leaveOutData
+    attributesMat = [];
+    mappedAttributeLabels = [];
+    
+    for c_tr = 1:length(defaultTrainClassLabels)
+        % Extract Features for each train class
+        % temp.currentClassName = Data.ClassLabelsPhrase{Para.idx_TrainingSet(c_tr)};
+        numberOfSamplesOfClass = sum(leaveOutDatasetLabels==defaultTrainClassLabels(c_tr));
+        attributesMat = [attributesMat; repmat(attributes(:, defaultTrainClassLabels(c_tr))', numberOfSamplesOfClass, 1)];
+        %tr_sample_ind = tr_sample_ind + tr_sample_class_ind;
+        mappedAttributeLabels = [mappedAttributeLabels; defaultTrainClassLabels(c_tr) * ones(numberOfSamplesOfClass, 1)];
+    end
+    
+    %Train regressor
+    mappedAttributes = functionTrainRegressor(leaveOutData', leaveOutDatasetLabels, attributesMat, BASE_PATH);
+    mappedAllAttributes = [mappedAllAttributes; mappedAttributes];
+    mappedAllAttributeLabels = [mappedAllAttributeLabels; mappedAttributeLabels];
+    leaveOutDatasetLabels = [];
+    tempB = [];
+    leaveOutData = [];
+    attributesMat = [];
+    mappedAttributeLabels = [];
+    save(sprintf('%s/apy_mappedAllAttributes.mat',dataset_path), 'mappedAllAttributes');
+    save(sprintf('%s/apy_mappedAllAttributeLabels.mat',dataset_path), 'mappedAllAttributeLabels');
+
+end
 else
-    temp1 = load(sprintf('%s/%s.mat',dataset_path, fileNameMappedAttributes));
-    mappedAllAttributes = temp1.mappedAllAttributes;
-    temp2 = load(sprintf('%s/%s.mat',dataset_path, fileNameMappedAttributesLabels));
-    mappedAllAttributeLabels = temp2.mappedAllAttributeLabels;
+   temp1 = load(sprintf('%s/apy_mappedAllAttributes.mat',dataset_path));
+   mappedAllAttributes = temp1.mappedAllAttributes;
+   temp2 = load(sprintf('%s/apy_mappedAllAttributeLabels.mat',dataset_path));
+   mappedAllAttributeLabels = temp2.mappedAllAttributeLabels;
 end
 
 ssClusteringModel = functionClusterData(mappedAllAttributes', mappedAllAttributeLabels, ...
-    numberOfClusters, length(defaultTrainClassLabels), defaultTrainClassLabels);
+            numberOfClusters, length(defaultTrainClassLabels), defaultTrainClassLabels);
 %% End >> Clustering of data
 
 
@@ -312,7 +313,8 @@ b = datasetLabels(test_id);
 if ~sum(size(a) == size(b))
     a = a';
 end
-acc = sum(a == b)/length(test_id)
+acc(k) = sum(a == b)/length(test_id)
+k=k+1;
 margins = [];
 meanAcc = mean(acc)
 %% END >> Testing
