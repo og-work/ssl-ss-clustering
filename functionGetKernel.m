@@ -17,9 +17,9 @@ function outKernel = functionGetKernel(inBASE_PATH, inData, inKernelType, inData
 % Suggest precompute chi2 kernel and save it for re-training model
 addpath(genpath(sprintf('%s/codes/matlab-stuff/tree-based-zsl', inBASE_PATH)));
 
-if 0%exist(fullfile(inDatasetPath, 'linear_kernel_awa_train_dataset_vgg.mat'),'file')
+if exist(fullfile(inDatasetPath, 'rbf_kernel_apy_train_dataset_vgg.mat'),'file')
     disp('Loading the precomputed kernel...')
-    temp = load(strcat(inDatasetPath, 'linear_kernel_awa_train_dataset_vgg.mat'));
+    temp = load(strcat(inDatasetPath, 'rbf_kernel_apy_train_dataset_vgg.mat'));
     outKernel = temp.outKernel;
 else
     %%% Doesn't exist precomputed chi2 kernel

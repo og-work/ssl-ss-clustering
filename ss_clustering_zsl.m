@@ -1,7 +1,7 @@
 
 clc;
 clear
-close all;
+%close all;
 
 % 1: Linux Laptop
 % 2: Windows laptop
@@ -56,7 +56,7 @@ end
 
 
 %% Start >> Clustering of data
-numberOfClusters = 1;
+numberOfClusters = 3;
 labels = zeros(1, NUMBER_OF_CLASSES);
 labels(defaultTestClassLabels) = 1;
 labels = 1. - labels;
@@ -74,7 +74,9 @@ mappedAllAttributeLabels = [];
 %**********************************************************
 %Select kernels from the following
 listOfKernelTypes = {'chisq', 'cosine', 'linear', 'rbf', 'rbfchisq'};
-kernelType = listOfKernelTypes{3};
+kernelType = listOfKernelTypes{4};
+useKernelisedData = 1;
+
 %Get training class features
 vggFeaturesTraining = [];
 labelsTrainingData = [];
@@ -85,15 +87,18 @@ for classInd = 1:length(defaultTrainClassLabels)
     labelsTrainingData = [labelsTrainingData; defaultTrainClassLabels(classInd) * ones(sum(tmp), 1)];
 end
 
-kernelData = functionGetKernel(BASE_PATH, vggFeaturesTraining', kernelType, dataset_path);
-%kernelData = ones(size(vggFeatures, 2), size(vggFeatures, 2));
+if useKernelisedData
+    kernelData = functionGetKernel(BASE_PATH, vggFeaturesTraining', kernelType, dataset_path);
+    %kernelData = ones(size(vggFeatures, 2), size(vggFeatures, 2));
+end
 
 listFileNamesMappedAttributes = {'awa_mappedAllAttributes', 'apy_mappedAllAttributes'};
 listFileNamesMappedAttributesLabels = {'awa_mappedAllAttributeLabels', 'apy_mappedAllAttributeLabels'};
 fileNameMappedAttributes = listFileNamesMappedAttributes{DATASET_ID};
 fileNameMappedAttributesLabels = listFileNamesMappedAttributesLabels{DATASET_ID};
+numberOfSamplesPerTrainClass = 150;
 
-if ~exist(fullfile(sprintf('%s/%s.mat', dataset_path, fileNameMappedAttributes)),'file')    
+if 1%~exist(fullfile(sprintf('%s/%s.mat', dataset_path, fileNameMappedAttributes)),'file')
     for ind = 1:1%length(datasetLabels) - leaveKOut;
         leaveOutDatasetLabels = labelsTrainingData;
         %Assign 0 label for left out samples
@@ -102,25 +107,36 @@ if ~exist(fullfile(sprintf('%s/%s.mat', dataset_path, fileNameMappedAttributes))
         tempB = (leaveOutDatasetLabels~=0);
         %create new labels array contianing only non-left-out samples
         leaveOutDatasetLabels = leaveOutDatasetLabels(tempB == 1);
-        %create new data contianing only non-left-out samples
-        %leaveOutData = vggFeatures(:,find(tempB == 1));
-        leaveOutData = kernelData(tempB, tempB);
-        %Prepare attribute matrix which contains attribute vec for each data
-        %point in leaveOutData
         attributesMat = [];
         mappedAttributeLabels = [];
+        tempC = [];
         
         for c_tr = 1:length(defaultTrainClassLabels)
+            tmp1 = (leaveOutDatasetLabels == defaultTrainClassLabels(c_tr));
+            col1 = find(tmp1);
+            col1 = col1(1:numberOfSamplesPerTrainClass);
+            tempC = [tempC; col1];
+            %Prepare attribute matrix which contains attribute vec for each data
+            %point in leaveOutData
             % Extract Features for each train class
-            % temp.currentClassName = Data.ClassLabelsPhrase{Para.idx_TrainingSet(c_tr)};
-            numberOfSamplesOfClass = sum(leaveOutDatasetLabels==defaultTrainClassLabels(c_tr));
-            attributesMat = [attributesMat; repmat(attributes(:, defaultTrainClassLabels(c_tr))', numberOfSamplesOfClass, 1)];
+            numberOfSamplesOfClass(c_tr) = numberOfSamplesPerTrainClass;%sum(leaveOutDatasetLabels==defaultTrainClassLabels(c_tr));
+            attributesMat = [attributesMat; repmat(attributes(:, defaultTrainClassLabels(c_tr))', numberOfSamplesOfClass(c_tr), 1)];
             %tr_sample_ind = tr_sample_ind + tr_sample_class_ind;
-            mappedAttributeLabels = [mappedAttributeLabels; defaultTrainClassLabels(c_tr) * ones(numberOfSamplesOfClass, 1)];
+            mappedAttributeLabels = [mappedAttributeLabels; defaultTrainClassLabels(c_tr) * ones(numberOfSamplesOfClass(c_tr), 1)];
+            col1=[];tmp1=[];
+        end
+        
+        %create new data contianing only non-left-out samples
+        %leaveOutData = vggFeatures(:,find(tempB == 1));
+        if useKernelisedData
+            leaveOutData = kernelData(tempC, tempC);
+        else
+            leaveOutData = vggFeaturesTraining(:, tempC);
         end
         
         %Train regressor
-        mappedAttributes = functionTrainRegressor(leaveOutData', leaveOutDatasetLabels, attributesMat, BASE_PATH);
+        mappedAttributes = functionTrainRegressor(leaveOutData', leaveOutDatasetLabels, ...
+            attributesMat, BASE_PATH, useKernelisedData);
         mappedAllAttributes = [mappedAllAttributes; mappedAttributes];
         mappedAllAttributeLabels = [mappedAllAttributeLabels; mappedAttributeLabels];
         leaveOutDatasetLabels = [];
@@ -129,8 +145,8 @@ if ~exist(fullfile(sprintf('%s/%s.mat', dataset_path, fileNameMappedAttributes))
         attributesMat = [];
         mappedAttributeLabels = [];
         save(sprintf('%s/%s.mat',dataset_path, fileNameMappedAttributes), 'mappedAllAttributes');
-        save(sprintf('%s/%s.mat',dataset_path, fileNameMappedAttributesLabels), 'mappedAllAttributeLabels');    
-    end    
+        save(sprintf('%s/%s.mat',dataset_path, fileNameMappedAttributesLabels), 'mappedAllAttributeLabels');
+    end
 else
     temp1 = load(sprintf('%s/%s.mat',dataset_path, fileNameMappedAttributes));
     mappedAllAttributes = temp1.mappedAllAttributes;
@@ -141,6 +157,9 @@ end
 ssClusteringModel = functionClusterData(mappedAllAttributes', mappedAllAttributeLabels, ...
     numberOfClusters, length(defaultTrainClassLabels), defaultTrainClassLabels);
 %% End >> Clustering of data
+
+% Plot clustered points
+funtionTSNEVisualisation(mappedAllAttributes', mappedAllAttributeLabels');
 
 
 %% START >> Training

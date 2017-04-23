@@ -1,7 +1,7 @@
 function clusteringModel = functionClusterData(inVggFeatures, inDatasetLabels, inNUMBER_OF_CLUSTERS, inNUMBER_OF_CLASSES, inClassLabels)
 USE_SUBSET_OF_FEATURES = 0;
 %% START >>> K-means clustering of IDT features of dataset (all videos, all classes)
-disp('K-means clustering of vgg features of dataset (all images, all classes)');
+disp('K-means clustering of features of dataset ...');
 subSetOfAllFeatures = zeros(0,0);
 offset = 0;
 stride = 15;
@@ -27,8 +27,8 @@ end
 %% END >>> K-means clustering of IDT features of dataset (all videos, all classes)
 
 if USE_SUBSET_OF_FEATURES
-%     a = reshape(clusterAssignmentsOfData, [], perClassFeatures);
-%     clusteringModel = mode(a, 2);
+    %     a = reshape(clusterAssignmentsOfData, [], perClassFeatures);
+    %     clusteringModel = mode(a, 2);
 else
     for i = 1:inNUMBER_OF_CLASSES
         clusteringModel.classClusterAssignment(i, 1) = mode(clusterAssignmentsOfData(inDatasetLabels == inClassLabels(i)));
@@ -38,10 +38,3 @@ else
 end
 
 clusteringModel.clusterCenters = clusterCenters;
-
-%funtionTSNEVisualisation(subsetOfFeatures, clusterAssignmentsOfData)
-%% t SNE visualisation
-% for i = 1:NUMBER_OF_CLASSES
-%    funtionTSNEVisualisation(subsetOfFeatures(:, perClassFeatures * (i-1) + 1: perClassFeatures * (i-1) + perClassFeatures), ...
-%                             a(i, :));
-% end
