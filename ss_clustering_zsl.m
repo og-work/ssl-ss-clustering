@@ -159,7 +159,7 @@ ssClusteringModel = functionClusterData(mappedAllAttributes', mappedAllAttribute
 %% End >> Clustering of data
 
 % Plot clustered points
-funtionTSNEVisualisation(mappedAllAttributes', mappedAllAttributeLabels');
+funtionTSNEVisualisation(mappedAllAttributes', mappedAllAttributeLabels', length(defaultTrainClassLabels));
 
 
 %% START >> Training

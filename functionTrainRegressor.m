@@ -58,7 +58,7 @@ end
 
 %[C gamma] = functionGetParaUsingCrossvalidation(Data.D_tr, attributes, inUseKernelisedData);
 
-Para.C = 0.001;
+Para.C = 1.5;
 outMappedVectors = zeros(size(inData, 1), size(inAttributes, 2));
 
 for d = 1:size(attributes, 2)
