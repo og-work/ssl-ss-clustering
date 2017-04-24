@@ -20,10 +20,16 @@ mappedX = tsne(inFeatures', [], no_dims, initial_dims, perplexity);
 markerString = '';
 
 for p = 1:inNumberOfClasses
-    if rem(p, 2)
+    if rem(p, 5)== 0
         markerString = strcat(markerString, 'o');
-    else
+    elseif rem(p, 5) == 1
         markerString = strcat(markerString, 'x');
+    elseif rem(p, 5) == 2
+        markerString = strcat(markerString, 'd');
+    elseif rem(p, 5) == 3
+        markerString = strcat(markerString, 's');
+    elseif rem(p, 5) == 4
+        markerString = strcat(markerString, 'h');
     end
 end
 

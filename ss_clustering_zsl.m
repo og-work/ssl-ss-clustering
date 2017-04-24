@@ -12,6 +12,11 @@ BASE_PATH = '';
 listDatasets = {'AwA', 'Pascal-Yahoo'};
 DATASET_ID = 2;
 DATASET = listDatasets{DATASET_ID};
+%Select kernels from the following
+listOfKernelTypes = {'chisq', 'cosine', 'linear', 'rbf', 'rbfchisq'};
+kernelType = listOfKernelTypes{4};
+useKernelisedData = 1;
+
 %Enable/add required tool boxes
 addPath = 1;
 BASE_PATH = functionSemantic_similaity_env_setup(SYSTEM_PLATFORM, addPath);
@@ -72,11 +77,6 @@ mappedAllAttributeLabels = [];
 %reducing dimension of attribute vectors for faster processing
 %attributes = attributes(1:30, :);
 %**********************************************************
-%Select kernels from the following
-listOfKernelTypes = {'chisq', 'cosine', 'linear', 'rbf', 'rbfchisq'};
-kernelType = listOfKernelTypes{4};
-useKernelisedData = 1;
-
 %Get training class features
 vggFeaturesTraining = [];
 labelsTrainingData = [];
@@ -96,7 +96,7 @@ listFileNamesMappedAttributes = {'awa_mappedAllAttributes', 'apy_mappedAllAttrib
 listFileNamesMappedAttributesLabels = {'awa_mappedAllAttributeLabels', 'apy_mappedAllAttributeLabels'};
 fileNameMappedAttributes = listFileNamesMappedAttributes{DATASET_ID};
 fileNameMappedAttributesLabels = listFileNamesMappedAttributesLabels{DATASET_ID};
-numberOfSamplesPerTrainClass = 150;
+numberOfSamplesPerTrainClass = 92;
 
 if 1%~exist(fullfile(sprintf('%s/%s.mat', dataset_path, fileNameMappedAttributes)),'file')
     for ind = 1:1%length(datasetLabels) - leaveKOut;
