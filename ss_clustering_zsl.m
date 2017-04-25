@@ -15,7 +15,9 @@ DATASET = listDatasets{DATASET_ID};
 %Select kernels from the following
 listOfKernelTypes = {'chisq', 'cosine', 'linear', 'rbf', 'rbfchisq'};
 kernelType = listOfKernelTypes{4};
-useKernelisedData = 1;
+useKernelisedData = 3;
+numberOfClusters = 2;
+
 
 %Enable/add required tool boxes
 addPath = 1;
@@ -61,7 +63,6 @@ end
 
 
 %% Start >> Clustering of data
-numberOfClusters = 3;
 labels = zeros(1, NUMBER_OF_CLASSES);
 labels(defaultTestClassLabels) = 1;
 labels = 1. - labels;
@@ -70,6 +71,7 @@ defaultTrainClassLabels = find(labels);
 leaveKOut = 1;
 mappedAllAttributes = [];
 mappedAllAttributeLabels = [];
+mappedAllAttributeLabelsVisualisation = [];
 
 % *********************This is temporary. Remove afterwards
 %**********************************************************
@@ -80,23 +82,35 @@ mappedAllAttributeLabels = [];
 %Get training class features
 vggFeaturesTraining = [];
 labelsTrainingData = [];
+labelsTestingData = [];
+indicesOfTrainingSamples = [];
+indicesOfTestingSamples = [];
 
 for classInd = 1:length(defaultTrainClassLabels)
     tmp = (datasetLabels == defaultTrainClassLabels(classInd));
+    indicesOfTrainingSamples = [indicesOfTrainingSamples; find(tmp)];
     vggFeaturesTraining = [vggFeaturesTraining vggFeatures(:, find(tmp))];
     labelsTrainingData = [labelsTrainingData; defaultTrainClassLabels(classInd) * ones(sum(tmp), 1)];
 end
 
-if useKernelisedData
-    kernelData = functionGetKernel(BASE_PATH, vggFeaturesTraining', kernelType, dataset_path);
-    %kernelData = ones(size(vggFeatures, 2), size(vggFeatures, 2));
+for classInd = 1:length(defaultTestClassLabels)
+    tmp = (datasetLabels == defaultTestClassLabels(classInd));
+    indicesOfTestingSamples = [indicesOfTestingSamples; find(tmp)];
+    labelsTestingData = [labelsTestingData; defaultTestClassLabels(classInd) * ones(sum(tmp), 1)];
 end
 
+if useKernelisedData
+   %kernelData = functionGetKernel(BASE_PATH, vggFeaturesTraining', kernelType, dataset_path);
+    kernelFullData = functionGetKernel(BASE_PATH, vggFeatures', kernelType, dataset_path);
+end
+
+kernelTrainData = kernelFullData(indicesOfTrainingSamples, indicesOfTrainingSamples);
+kernelTestData = kernelFullData(indicesOfTrainingSamples, indicesOfTrainingSamples);
 listFileNamesMappedAttributes = {'awa_mappedAllAttributes', 'apy_mappedAllAttributes'};
 listFileNamesMappedAttributesLabels = {'awa_mappedAllAttributeLabels', 'apy_mappedAllAttributeLabels'};
 fileNameMappedAttributes = listFileNamesMappedAttributes{DATASET_ID};
 fileNameMappedAttributesLabels = listFileNamesMappedAttributesLabels{DATASET_ID};
-numberOfSamplesPerTrainClass = 92;
+numberOfSamplesPerTrainClass = 150;
 
 if 1%~exist(fullfile(sprintf('%s/%s.mat', dataset_path, fileNameMappedAttributes)),'file')
     for ind = 1:1%length(datasetLabels) - leaveKOut;
@@ -109,6 +123,7 @@ if 1%~exist(fullfile(sprintf('%s/%s.mat', dataset_path, fileNameMappedAttributes
         leaveOutDatasetLabels = leaveOutDatasetLabels(tempB == 1);
         attributesMat = [];
         mappedAttributeLabels = [];
+        mappedAttributeLabelsVisualisation = [];
         tempC = [];
         
         for c_tr = 1:length(defaultTrainClassLabels)
@@ -123,22 +138,27 @@ if 1%~exist(fullfile(sprintf('%s/%s.mat', dataset_path, fileNameMappedAttributes
             attributesMat = [attributesMat; repmat(attributes(:, defaultTrainClassLabels(c_tr))', numberOfSamplesOfClass(c_tr), 1)];
             %tr_sample_ind = tr_sample_ind + tr_sample_class_ind;
             mappedAttributeLabels = [mappedAttributeLabels; defaultTrainClassLabels(c_tr) * ones(numberOfSamplesOfClass(c_tr), 1)];
+            mappedAttributeLabelsVisualisation = [mappedAttributeLabelsVisualisation; c_tr * ones(numberOfSamplesOfClass(c_tr), 1)];
             col1=[];tmp1=[];
         end
         
         %create new data contianing only non-left-out samples
         %leaveOutData = vggFeatures(:,find(tempB == 1));
+        indicesOfTrainingSamplesLeaveOut = [1:length(tempC)];
+        indicesOfTestingSamplesTmp = [length(tempC) + 1: length(tempC) + length(indicesOfTestingSamples)];
+        tempC = [tempC; indicesOfTestingSamples];
         if useKernelisedData
-            leaveOutData = kernelData(tempC, tempC);
+            leaveOutData = kernelFullData(tempC, tempC);
         else
             leaveOutData = vggFeaturesTraining(:, tempC);
         end
         
         %Train regressor
-        mappedAttributes = functionTrainRegressor(leaveOutData', leaveOutDatasetLabels, ...
-            attributesMat, BASE_PATH, useKernelisedData);
+        [mappedAttributes regressorFunction semanticEmbeddingsTest]= functionTrainRegressor(leaveOutData', leaveOutDatasetLabels, ...
+            attributesMat, BASE_PATH, useKernelisedData, indicesOfTrainingSamplesLeaveOut, indicesOfTestingSamplesTmp);
         mappedAllAttributes = [mappedAllAttributes; mappedAttributes];
         mappedAllAttributeLabels = [mappedAllAttributeLabels; mappedAttributeLabels];
+        mappedAllAttributeLabelsVisualisation = [mappedAllAttributeLabelsVisualisation; mappedAttributeLabelsVisualisation];
         leaveOutDatasetLabels = [];
         tempB = [];
         leaveOutData = [];
@@ -159,7 +179,11 @@ ssClusteringModel = functionClusterData(mappedAllAttributes', mappedAllAttribute
 %% End >> Clustering of data
 
 % Plot clustered points
-funtionTSNEVisualisation(mappedAllAttributes', mappedAllAttributeLabels', length(defaultTrainClassLabels));
+semanticEmbeddingFullData = [mappedAllAttributes; semanticEmbeddingsTest];
+semanticLabelsFullData = [mappedAllAttributeLabelsVisualisation; labelsTestingData];
+funtionTSNEVisualisation(semanticEmbeddingsTest', labelsTestingData', length(defaultTestClassLabels));
+%funtionTSNEVisualisation(semanticEmbeddingFullData', semanticLabelsFullData', NUMBER_OF_CLASSES);
+%funtionTSNEVisualisation(mappedAllAttributes', mappedAllAttributeLabelsVisualisation', length(defaultTrainClassLabels));
 
 
 %% START >> Training
@@ -311,6 +335,11 @@ for i = 1:length(test_id)
     %distance = sqrt(sum(distMat.^2, 1));
     %distance = distance./sum(distance);
     %weighted_d = 0;
+    %semanticEmbedding = functionTestRegressor(vggFeatures(:,test_id(i))', regressorFunction);
+    
+    diff = repmat(semanticEmbeddingsTest(i, :)', 1, numberOfValidClusters) - ssClusteringModel.clusterCenters;
+    weights = sum(diff.^2, 1)/sum(sum(diff.^2, 1));
+    
     scoresAcrossClusters = [];
     for clusterIndex = 1:numberOfValidClusters
         Templates = clusterInfo(clusterIndex).Templates;
@@ -319,7 +348,7 @@ for i = 1:length(test_id)
         d = max(0, repmat(vggFeatures(:,test_id(i)), [1 size(Templates,2)])- Templates);
         d = w' * d * alpha(:,testClassLabels);
         %weighted_d = weighted_d + d * distance(clusterIndex);
-        scoresAcrossClusters = [scoresAcrossClusters; d];
+        scoresAcrossClusters = [scoresAcrossClusters; d*weights(clusterIndex)];
     end
     
     margins = [margins; max(scoresAcrossClusters, [], 1)];%weighted_d];

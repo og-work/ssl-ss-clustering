@@ -5,7 +5,7 @@
 % inFeatures:
 % D x N matrix with N data points each of D dimension
 % inLabels:
-% 1 vector containing labels of each of N data points.
+% 1 X N vector containing labels of each of N data points.
 % inNumberOfClasses:
 % Number of classes in data
 

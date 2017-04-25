@@ -22,12 +22,13 @@
 % outMappedVectors:
 % Mapped input data using learned SVM regressor.
 
-function outMappedVectors = functionTrainRegressor(inData, inDatasetLabels, inAttributes, inBASE_PATH, inUseKernelisedData)
+function [outSemanticEmbeddingsTrain, outRegressorFunction, outSemanticEmbeddingsTest] = functionTrainRegressor(inData, ...
+    inDatasetLabels, inAttributes, inBASE_PATH, inUseKernelisedData, inIdicesOfTrainingSamples, inIndicesOfTestingSamples)
 addpath(genpath(sprintf('%s/codes/matlab-stuff/tree-based-zsl', inBASE_PATH)));
 
 kernelData = double(inData);
-Data.D_tr = kernelData;%(Data.tr_sample_ind, Data.tr_sample_ind);
-Data.D_ts = kernelData;%(Data.ts_sample_ind, Data.tr_sample_ind);
+Data.D_tr = kernelData(inIdicesOfTrainingSamples, inIdicesOfTrainingSamples);
+Data.D_ts = kernelData(inIndicesOfTestingSamples, inIdicesOfTrainingSamples);
 
 if inUseKernelisedData
 %     Generate RBF Chi2 Kernel Matrix
@@ -66,13 +67,14 @@ for d = 1:size(attributes, 2)
     if inUseKernelisedData
         %If precomputed kernel is used
         model{d} = libsvmtrain(attributes(:,d),[(1:size(Data.D_tr,1))' Data.D_tr],sprintf('-s 3 -t %d -c %f -h 0', kernel, Para.C)); % -s 3
+        outSemanticEmbeddingsTest(:,d) = libsvmpredict(zeros(size(Data.D_ts,1),1),[(1:size(Data.D_ts,1))' Data.D_ts], model{d});
+        outSemanticEmbeddingsTrain(:,d) = libsvmpredict(zeros(size(Data.D_tr,1),1),[(1:size(Data.D_tr,1))' Data.D_tr], model{d});
     else
         %If data is used directly
         model{d} = libsvmtrain(attributes(:,d), Data.D_tr, sprintf('-s 3 -t %d -c %f -h 0', kernel, Para.C)); % -s 3
-        %ts_LabelVec_hat(:,d) = libsvmpredict(zeros(size(Data.D_ts,1),1),[(1:size(Data.D_ts,1))' Data.D_ts],model{d});
     end
-    outMappedVectors(:,d) = libsvmpredict(zeros(size(Data.D_tr,1),1), Data.D_tr, model{d});
     toc;
     fprintf('Finish %d th dimension\n',d)
 end
+outRegressorFunction = model;
 
