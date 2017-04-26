@@ -1,7 +1,7 @@
 
 clc;
 clear
-%close all;
+close all;
 
 % 1: Linux Laptop
 % 2: Windows laptop
@@ -14,51 +14,54 @@ DATASET_ID = 2;
 DATASET = listDatasets{DATASET_ID};
 %Select kernels from the following
 listOfKernelTypes = {'chisq', 'cosine', 'linear', 'rbf', 'rbfchisq'};
-kernelType = listOfKernelTypes{4};
+kernelType = listOfKernelTypes{3};
 useKernelisedData = 3;
 numberOfClusters = 2;
-
-
+listFileNamesMappedAttributes = {'awa_mappedAllAttributes', 'apy_mappedAllAttributes'};
+listFileNamesMappedAttributesLabels = {'awa_mappedAllAttributeLabels', 'apy_mappedAllAttributeLabels'};
+fileNameMappedAttributes = listFileNamesMappedAttributes{DATASET_ID};
+fileNameMappedAttributesLabels = listFileNamesMappedAttributesLabels{DATASET_ID};
 %Enable/add required tool boxes
 addPath = 1;
 BASE_PATH = functionSemantic_similaity_env_setup(SYSTEM_PLATFORM, addPath);
+VIEW_TSNE = 1;
 
 %% START >> Load data
-if 1
-    if(strcmp(DATASET, 'AwA'))
-        dataset_path = sprintf('%s/data/code-data/semantic-similarity/precomputed-features-AwA/', BASE_PATH);
-        %'data/code-data/semantic-similarity/cnn-features
-        %temp = load(sprintf('%s/data/code-data/semantic-similarity/cnn-features/AwA/feat-imagenet-vgg-verydeep-19.mat', BASE_PATH));
-        temp = load(sprintf('%s/AwA_All_vgg19Features.mat', dataset_path));
-        vggFeatures = temp.vggFeatures;
-        attributes = load(sprintf('%s/AwA_All_ClassLabelPhraseDict.mat', dataset_path));
-        temp = load(sprintf('%s/AwA_All_DatasetLabels.mat', dataset_path));
-        datasetLabels = temp.datasetLabels;
-        vggFeatures = vggFeatures';
-        attributes = attributes.phrasevec_mat';
-        NUMBER_OF_CLASSES = 50;
-        %Default setting of AwA
-        %defaultTrainClassLabels = [1:7, 9:16, 18:21, 23, 25, 27:32, 35:36, 39, 41:50];
-        % From dataset
-        defaultTestClassLabels = [8 17 22 24 26 33 34 37 38 40];
-        % from semsnticdemo
-        %defaultTestClassLabels = [25 39 15 6 42 14 18 48 34 24];
-    elseif (strcmp(DATASET, 'Pascal-Yahoo'))
-        dataset_path = sprintf('%s/data/code-data/semantic-similarity/cnn-features/aPY/', BASE_PATH);
-        load(sprintf('%s/class_attributes.mat', dataset_path));
-        load(sprintf('%s/cnn_feat_imagenet-vgg-verydeep-19.mat', dataset_path));
-        datasetLabels = labels;
-        clear labels;
-        vggFeatures = cnn_feat;
-        attributes = class_attributes';
-        NUMBER_OF_CLASSES = 32;
-        % From dataset
-        defaultTestClassLabels = [21:32];
-        
-    else
-        sprintf('No Dataset selected ...')
-    end
+if(strcmp(DATASET, 'AwA'))
+    dataset_path = sprintf('%s/data/code-data/semantic-similarity/precomputed-features-AwA/', BASE_PATH);
+    %'data/code-data/semantic-similarity/cnn-features
+    %temp = load(sprintf('%s/data/code-data/semantic-similarity/cnn-features/AwA/feat-imagenet-vgg-verydeep-19.mat', BASE_PATH));
+    temp = load(sprintf('%s/AwA_All_vgg19Features.mat', dataset_path));
+    vggFeatures = temp.vggFeatures;
+    attributes = load(sprintf('%s/AwA_All_ClassLabelPhraseDict.mat', dataset_path));
+    temp = load(sprintf('%s/AwA_All_DatasetLabels.mat', dataset_path));
+    datasetLabels = temp.datasetLabels';
+    vggFeatures = vggFeatures';
+    attributes = attributes.phrasevec_mat';
+    NUMBER_OF_CLASSES = 50;
+    %Default setting of AwA
+    %defaultTrainClassLabels = [1:7, 9:16, 18:21, 23, 25, 27:32, 35:36, 39, 41:50];
+    % From dataset
+    defaultTestClassLabels = [8 17 22 24 26 33 34 37 38 40];
+    % from semsnticdemo
+    %defaultTestClassLabels = [25 39 15 6 42 14 18 48 34 24];
+    numberOfSamplesPerTrainClass = 20;%92;%150 apy, 92 AwA
+elseif (strcmp(DATASET, 'Pascal-Yahoo'))
+    dataset_path = sprintf('%s/data/code-data/semantic-similarity/cnn-features/aPY/', BASE_PATH);
+    load(sprintf('%s/class_attributes.mat', dataset_path));
+    load(sprintf('%s/cnn_feat_imagenet-vgg-verydeep-19.mat', dataset_path));
+    datasetLabels = labels;
+    clear labels;
+    vggFeatures = cnn_feat;
+    attributes = class_attributes';
+    NUMBER_OF_CLASSES = 32;
+    % From dataset
+    defaultTestClassLabels = [1 2 4 5 6 3 8 10 12 13];%[21:32];   
+    numberOfSamplesPerTrainClass = 10; %apy, 92 AwA
+else
+    sprintf('No Dataset selected ...')
 end
+
 %% END >> Load data
 
 
@@ -73,12 +76,6 @@ mappedAllAttributes = [];
 mappedAllAttributeLabels = [];
 mappedAllAttributeLabelsVisualisation = [];
 
-% *********************This is temporary. Remove afterwards
-%**********************************************************
-%**********************************************************
-%reducing dimension of attribute vectors for faster processing
-%attributes = attributes(1:30, :);
-%**********************************************************
 %Get training class features
 vggFeaturesTraining = [];
 labelsTrainingData = [];
@@ -100,17 +97,12 @@ for classInd = 1:length(defaultTestClassLabels)
 end
 
 if useKernelisedData
-   %kernelData = functionGetKernel(BASE_PATH, vggFeaturesTraining', kernelType, dataset_path);
+    %kernelData = functionGetKernel(BASE_PATH, vggFeaturesTraining', kernelType, dataset_path);
     kernelFullData = functionGetKernel(BASE_PATH, vggFeatures', kernelType, dataset_path);
 end
 
 kernelTrainData = kernelFullData(indicesOfTrainingSamples, indicesOfTrainingSamples);
-kernelTestData = kernelFullData(indicesOfTrainingSamples, indicesOfTrainingSamples);
-listFileNamesMappedAttributes = {'awa_mappedAllAttributes', 'apy_mappedAllAttributes'};
-listFileNamesMappedAttributesLabels = {'awa_mappedAllAttributeLabels', 'apy_mappedAllAttributeLabels'};
-fileNameMappedAttributes = listFileNamesMappedAttributes{DATASET_ID};
-fileNameMappedAttributesLabels = listFileNamesMappedAttributesLabels{DATASET_ID};
-numberOfSamplesPerTrainClass = 150;
+kernelTestData = kernelFullData(indicesOfTestingSamples, indicesOfTrainingSamples);
 
 if 1%~exist(fullfile(sprintf('%s/%s.mat', dataset_path, fileNameMappedAttributes)),'file')
     for ind = 1:1%length(datasetLabels) - leaveKOut;
@@ -147,14 +139,16 @@ if 1%~exist(fullfile(sprintf('%s/%s.mat', dataset_path, fileNameMappedAttributes
         indicesOfTrainingSamplesLeaveOut = [1:length(tempC)];
         indicesOfTestingSamplesTmp = [length(tempC) + 1: length(tempC) + length(indicesOfTestingSamples)];
         tempC = [tempC; indicesOfTestingSamples];
+        
         if useKernelisedData
             leaveOutData = kernelFullData(tempC, tempC);
         else
+            %***TODO Correction here: should be vggFeatures
             leaveOutData = vggFeaturesTraining(:, tempC);
         end
         
         %Train regressor
-        [mappedAttributes regressorFunction semanticEmbeddingsTest]= functionTrainRegressor(leaveOutData', leaveOutDatasetLabels, ...
+        [mappedAttributes mappingF semanticEmbeddingsTest]= functionTrainRegressor(leaveOutData', ...
             attributesMat, BASE_PATH, useKernelisedData, indicesOfTrainingSamplesLeaveOut, indicesOfTestingSamplesTmp);
         mappedAllAttributes = [mappedAllAttributes; mappedAttributes];
         mappedAllAttributeLabels = [mappedAllAttributeLabels; mappedAttributeLabels];
@@ -162,7 +156,7 @@ if 1%~exist(fullfile(sprintf('%s/%s.mat', dataset_path, fileNameMappedAttributes
         leaveOutDatasetLabels = [];
         tempB = [];
         leaveOutData = [];
-        attributesMat = [];
+        %attributesMat = [];
         mappedAttributeLabels = [];
         save(sprintf('%s/%s.mat',dataset_path, fileNameMappedAttributes), 'mappedAllAttributes');
         save(sprintf('%s/%s.mat',dataset_path, fileNameMappedAttributesLabels), 'mappedAllAttributeLabels');
@@ -181,178 +175,70 @@ ssClusteringModel = functionClusterData(mappedAllAttributes', mappedAllAttribute
 % Plot clustered points
 semanticEmbeddingFullData = [mappedAllAttributes; semanticEmbeddingsTest];
 semanticLabelsFullData = [mappedAllAttributeLabelsVisualisation; labelsTestingData];
-funtionTSNEVisualisation(semanticEmbeddingsTest', labelsTestingData', length(defaultTestClassLabels));
-%funtionTSNEVisualisation(semanticEmbeddingFullData', semanticLabelsFullData', NUMBER_OF_CLASSES);
-%funtionTSNEVisualisation(mappedAllAttributes', mappedAllAttributeLabelsVisualisation', length(defaultTrainClassLabels));
 
+if VIEW_TSNE
+%funtionTSNEVisualisation(semanticEmbeddingsTest', labelsTestingData', length(defaultTestClassLabels));
+funtionTSNEVisualisation(semanticEmbeddingFullData', semanticLabelsFullData', NUMBER_OF_CLASSES);
+funtionTSNEVisualisation(mappedAllAttributes', mappedAllAttributeLabelsVisualisation', length(defaultTrainClassLabels));
+end
 
-%% START >> Training
-validClusterIndex = 1;
-validClusterIndices = [];
+%% START >> Semantic to semantic mapping
+useKernelisedData = 0;
+mappingG = [];
+b = 1;
+indexOfRemappedSeenPrototypes = [];
 
 for clusterIndex = 1:numberOfClusters
     allClassesInCluster = find(ssClusteringModel.classClusterAssignment(:, 1) == clusterIndex);
     trainClassIndex = find(ismember(defaultTrainClassLabels, allClassesInCluster));
     %testClassIndex = defaultTestClassLabels; %find(ismember(defaultTestClassLabels, allClassesInCluster));
     trainClassLabels = defaultTrainClassLabels(trainClassIndex);
-    testClassLabels = defaultTestClassLabels;% defaultTestClassLabels(testClassIndex);
-    clusterInfo(clusterIndex).trainClasses = [trainClassLabels zeros(1, NUMBER_OF_CLASSES - length(trainClassLabels))];
-    clusterInfo(clusterIndex).testClasses = [testClassLabels zeros(1, NUMBER_OF_CLASSES - length(testClassLabels))];
+    indicesOfTrainClassAttributes = find(ismember(mappedAllAttributeLabels, trainClassLabels));
+    remappSource = mappedAllAttributes(indicesOfTrainClassAttributes, :);
+    remappTarget = attributesMat(indicesOfTrainClassAttributes, :);
+    [reMappedAttributes regressor reMappedSemanticEmbeddingsTest]= functionTrainRegressor(remappSource', ...
+    remappTarget, BASE_PATH, useKernelisedData, [1:size(remappSource, 1)], []);
+    mappingG = [mappingG regressor];
+    reMappedAllAttributesLabels = [];
+    indexOfRemappedSeenPrototypes = [indexOfRemappedSeenPrototypes trainClassLabels];
     
-    if ~isempty(trainClassLabels)
-        %%  train
-        % Templates are empirical mean embedding per class
-        Templates = zeros(size(vggFeatures,1), length(trainClassLabels), 'single');
-        for i = 1:length(trainClassLabels)
-            Templates(:,i) = mean(vggFeatures(:, datasetLabels==trainClassLabels(i)), 2);
-        end
-        
-        %% source domain
-        A = attributes;
-        
-        %%% linear kernel   (H + 1e-3)
-        %A = A ./ repmat(sqrt(sum(A.^2, 2))+eps, [1 size(A,2)]);
-        A = A ./ repmat(sqrt(sum(A.^2, 1))+eps, [size(A,1) 1]);%original
-        A = A' * A;
-        
-        %%% projection
-        H = A(trainClassLabels, trainClassLabels);
-        F = A(trainClassLabels, :);
-        alpha = zeros(length(trainClassLabels), size(F,2));
-        
-        %%% qpas is a quadratic programming solver.
-        %You can change it to any QP solver you have (e.g. the default matlab QP solver)
-        % using only equality constrint and lower bound
-        
-        for i = 1:size(F,2)
-            f = -F(:,i);
-            %alpha(:,i) = qpas(double(H + 1e1*eye(size(H,2))), double(f),[],[], ...
-            %    ones(1,length(f)),1,zeros(length(f),1));
-            alpha(:, i) = quadprog(double(H + 1e1*eye(size(H,2))), double(f), [], [], ones(1,length(f)), 1, zeros(length(f),1));
-        end
-        
-        %%  target domain
-        train_id = find(ismember(datasetLabels, trainClassLabels));
-        x = zeros(4096, length(trainClassLabels), length(trainClassLabels), 'single');
-        for i = 1:length(train_id)
-            %     d = min(repmat(cnn_feat(:,train_id(i)), [1 size(Templates,2)]), Templates);    % intersection
-            d = max(0, repmat(vggFeatures(:,train_id(i)), [1 size(Templates,2)])-Templates);    % ReLU
-            x(:,:,datasetLabels(train_id(i))==trainClassLabels) = ...
-                x(:,:,datasetLabels(train_id(i))==trainClassLabels) + single(d*alpha(:,trainClassLabels));
-        end
-        
-        y = [];
-        
-        for i = 1:length(trainClassLabels)
-            d = -ones(size(alpha,2), 1);
-            d(trainClassLabels(i)) = 1;
-            y = [y; d(trainClassLabels)];
-        end
-        x = reshape(x, size(x,1), []);
-        
-        %%% train svms
-        %%% svmocas is an svm solver. You can change it to any svm solver you have (e.g. liblinear)
-        
-        maxval = max(abs(x(:)));
-        %rand_id = randsample(find(y==-1), 50);
-        
-        %[w b stat] = svmocas(x./maxval, 1, double(y), 1e1);
-        features = x./maxval;
-        
-        svmModel = train(double(y), sparse(double(features')), '-c 10');
-        w = (svmModel.w)';
-        
-        %%% update models
-        % Alternately learn on Templates and w
-        for iter = 1:1
-            iter
-            %%% gradient
-            grad = zeros(length(w), size(alpha,1));
-            for i = 1:length(train_id)
-                %         d = min(repmat(cnn_feat(:,train_id(i)), [1 size(Templates,2)]), Templates);
-                d = max(0, repmat(vggFeatures(:,train_id(i)), [1 size(Templates,2)])-Templates);
-                val = (w' * d) * alpha;
-                y = -ones(1, size(alpha,2));
-                y(datasetLabels(train_id(i))) = 1;
-                dec = single(val.*y<0);
-                if any(dec==1)
-                    grad = grad + (w*((dec.*y)*alpha'))...
-                        .* single(repmat(vggFeatures(:,train_id(i)), [1 size(alpha,1)])<Templates);     % gradient needs to be adjusted for intersection
-                end
-            end
-            %     Templates = max(0, Templates + 1e-2*grad./length(train_id));     % no l1: 1e0, with l1: 1e-3
-            Templates = max(0, Templates - 1e-3*grad./length(train_id));
-            
-            
-            %%% sample data
-            x = zeros(4096, length(trainClassLabels), length(trainClassLabels), 'single');
-            for i = 1:length(train_id)
-                %         d = min(repmat(cnn_feat(:,train_id(i)), [1 size(Templates,2)]), Templates);
-                d = max(0, repmat(vggFeatures(:,train_id(i)), [1 size(Templates,2)])-Templates);
-                x(:,:,datasetLabels(train_id(i))==trainClassLabels) = x(:,:,datasetLabels(train_id(i))==trainClassLabels) + single(d*alpha(:,trainClassLabels));
-            end
-            y = [];
-            for i = 1:length(trainClassLabels)
-                d = -ones(size(alpha,2), 1);
-                d(trainClassLabels(i)) = 1;
-                y = [y; d(trainClassLabels)];
-            end
-            x = reshape(x, size(x,1), []);
-            
-            %%% train svms
-            maxval = max(abs(x(:)));
-            %[w b stat] = svmocas(x./maxval, 1, double(y(:)), 1e1);
-            
-            features = x./maxval;
-            svmModel = train(double(y), sparse(double(features')), '-c 10');
-            w = (svmModel.w)';
-        end
-        
-        clusterInfo(validClusterIndex).w = w;
-        clusterInfo(validClusterIndex).alpha = alpha;
-        clusterInfo(validClusterIndex).Templates = Templates;
-        validClusterIndex = validClusterIndex + 1;
-        validClusterIndices = [validClusterIndices clusterIndex];
-    else
-        sprintf('Skipping cluster %d', clusterIndex)
+    for m = 1:length(trainClassLabels)
+        tmpClassLabel = m + length(defaultTrainClassLabels);
+        reMappedAttributesLabels = tmpClassLabel*ones(sum(ismember(mappedAllAttributeLabels, trainClassLabels(m))), 1);
+        reMappedAllAttributesLabels = [reMappedAllAttributesLabels; reMappedAttributesLabels];
+        startI = (m - 1) * numberOfSamplesPerTrainClass + 1;
+        endI = (m - 1) * numberOfSamplesPerTrainClass + numberOfSamplesPerTrainClass;
+        remappedSeenPrototypes(:, b) = mean(reMappedAttributes(startI:endI, :))';
+        b = b + 1;
+    end
+    
+    if VIEW_TSNE
+%     funtionTSNEVisualisation([mappedAllAttributes; reMappedAttributes]', ...
+%     [mappedAllAttributeLabelsVisualisation; reMappedAllAttributesLabels]', tmpClassLabel);
+    funtionTSNEVisualisation(reMappedAttributes', ...
+            reMappedAllAttributesLabels', length(trainClassLabels));
     end
 end
-numberOfValidClusters = validClusterIndex - 1;
-%% END >> Training
+%%END >> Semantic to semantic mapping
 
+%Training
+validClusterIndex = 1;
+validClusterIndices = [];
+histogramsAllClasses = functionGetSourceDomainEmbedding(vggFeatures, defaultTrainClassLabels, ...
+    datasetLabels, attributes);
 
-%% START >> Testing
+%Testing
 margins = [];
-test_id = find(ismember(datasetLabels, testClassLabels));
+test_id = find(ismember(datasetLabels, defaultTestClassLabels));
+targetDomainEmbeddingsTest = functionGetTargetDomainEmbedding(test_id, semanticEmbeddingsTest,...
+    numberOfClusters, ssClusteringModel, mappingG, remappedSeenPrototypes, indexOfRemappedSeenPrototypes);
 
 for i = 1:length(test_id)
-    
-    %Find the cluster to which test sample belongs
-    %tmp = ssClusteringModel.clusterCenters;
-    %clusterCenters = tmp(:, validClusterIndices);
-    %distMat =  clusterCenters - repmat(vggFeatures(:,test_id(i)), 1, numberOfValidClusters);
-    %[distance clusterAssignment] = min(sqrt(sum(distMat.^2, 1)));
-    %distance = sqrt(sum(distMat.^2, 1));
-    %distance = distance./sum(distance);
-    %weighted_d = 0;
-    %semanticEmbedding = functionTestRegressor(vggFeatures(:,test_id(i))', regressorFunction);
-    
-    diff = repmat(semanticEmbeddingsTest(i, :)', 1, numberOfValidClusters) - ssClusteringModel.clusterCenters;
-    weights = sum(diff.^2, 1)/sum(sum(diff.^2, 1));
-    
-    scoresAcrossClusters = [];
-    for clusterIndex = 1:numberOfValidClusters
-        Templates = clusterInfo(clusterIndex).Templates;
-        w = clusterInfo(clusterIndex).w;
-        alpha = clusterInfo(clusterIndex).alpha;
-        d = max(0, repmat(vggFeatures(:,test_id(i)), [1 size(Templates,2)])- Templates);
-        d = w' * d * alpha(:,testClassLabels);
-        %weighted_d = weighted_d + d * distance(clusterIndex);
-        scoresAcrossClusters = [scoresAcrossClusters; d*weights(clusterIndex)];
-    end
-    
-    margins = [margins; max(scoresAcrossClusters, [], 1)];%weighted_d];
+    scoresAcrossClusters =  reshape(targetDomainEmbeddingsTest(:, i, :), length(defaultTrainClassLabels), numberOfClusters)'...
+        * histogramsAllClasses(:,defaultTestClassLabels);
+    margins = [margins; max(scoresAcrossClusters, [], 1)];
 end
+
 %%% classify
 [margin id] = max(margins, [], 2);
 a = (testClassLabels(id));
@@ -364,14 +250,4 @@ acc = sum(a == b)/length(test_id)
 margins = [];
 meanAcc = mean(acc)
 %% END >> Testing
-
-
-%% START >> Save results
-results.clusterInfo = clusterInfo;
-results.accuracy = meanAcc;
-results.numberOfClusters = numberOfClusters;
-results.numberOfValidClusters = numberOfValidClusters;
-%save(sprintf('%s/data/code-data/semantic-similarity/results/results_itr_%d_AwA_clstrs_%d.mat', ...
-%    BASE_PATH, expIter, numberOfClusters), 'results');
-%% END >> Save results
 

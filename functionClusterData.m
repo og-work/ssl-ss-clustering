@@ -1,6 +1,7 @@
-function clusteringModel = functionClusterData(inVggFeatures, inDatasetLabels, inNUMBER_OF_CLUSTERS, inNUMBER_OF_CLASSES, inClassLabels)
+function clusteringModel = functionClusterData(inVggFeatures, inDatasetLabels, ...
+    inNUMBER_OF_CLUSTERS, inNUMBER_OF_CLASSES, inClassLabels)
+
 USE_SUBSET_OF_FEATURES = 0;
-%% START >>> K-means clustering of IDT features of dataset (all videos, all classes)
 disp('K-means clustering of features of dataset ...');
 subSetOfAllFeatures = zeros(0,0);
 offset = 0;
@@ -24,7 +25,6 @@ end
 % Using Matlab kmeans
 % [clusterAssignmentsOfData, clusterCenters] = kmeans(subSetOfAllFeatures', NUMBER_OF_CLUSTERS);
 % clusterCenters = clusterCenters';
-%% END >>> K-means clustering of IDT features of dataset (all videos, all classes)
 
 if USE_SUBSET_OF_FEATURES
     %     a = reshape(clusterAssignmentsOfData, [], perClassFeatures);
