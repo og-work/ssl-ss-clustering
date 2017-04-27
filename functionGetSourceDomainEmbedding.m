@@ -1,12 +1,14 @@
-function outHistogramAllClasses = functionGetSourceDomainEmbedding(inVggFeatures, inTrainClassLabels, ...
-    inDatasetLabels, inAttributes)
+function outHistogramUnseenClasses = functionGetSourceDomainEmbedding(inTestClassLabels, inTrainClassLabels, inAttributes)
 
-% Templates are phi(s) i.e. target domain embedding  function/mapping
-Templates = zeros(size(inVggFeatures,1), length(inTrainClassLabels), 'single');
-for i = 1:length(inTrainClassLabels)
-    Templates(:,i) = mean(inVggFeatures(:, inDatasetLabels==inTrainClassLabels(i)), 2);
+outHistogramUnseenClasses = zeros(size(inAttributes, 2), length(inTrainClassLabels));
+
+for p = 1:length(inTestClassLabels)
+    diff = repmat(inAttributes(:, inTestClassLabels(p)), 1, length(inTrainClassLabels)) - inAttributes(:, inTrainClassLabels);
+    outHistogramUnseenClasses(inTestClassLabels(p), :) = sum(diff.^2, 1)/sum(sum(diff.^2, 1));
 end
+outHistogramUnseenClasses = outHistogramUnseenClasses';
 
+if 0
 %% source domain
 A = inAttributes;
 
@@ -30,5 +32,6 @@ for i = 1:size(F,2)
     %    ones(1,length(f)),1,zeros(length(f),1));
     alpha(:, i) = quadprog(double(H + 1e1*eye(size(H,2))), double(f), [], [], ones(1,length(f)), 1, zeros(length(f),1));
 end
-
 outHistogramAllClasses = alpha;
+
+end

@@ -22,10 +22,10 @@ elseif SYSTEM_PLATFORM == 2
     
 else
     % For windows desktop
-    BASE_PATH = 'E:\omkar-work\study\';
+    BASE_PATH = 'E:\omkar-work\study\phd-research\'
     if addPath
-        addpath(genpath(sprintf('%s/codes/third-party-softwares/ocas/libocas_v097/', BASE_PATH)));disp('Enabling ocas/libocas_v097');        
-        addpath(genpath(sprintf('%s/codes/third-party-softwares-codes/svm/liblinear', BASE_PATH)));disp('Enabling ocas/liblinear');        
+        %addpath(genpath(sprintf('%s/codes/third-party-softwares/ocas/libocas_v097/', BASE_PATH)));disp('Enabling ocas/libocas_v097');        
+        addpath(genpath(sprintf('%s/codes/third-party-softwares-codes\svm\libSVM\libsvm-3.21\windows\', BASE_PATH)));disp('Enabling ocas/liblinear');        
         run(sprintf('%s/codes/third-party-softwares-codes/VL-feat/VLFEATROOT/vlfeat-0.9.20/toolbox/vl_setup', BASE_PATH));disp('Enabling VL feat toolbox');
         addpath(genpath(sprintf('%s/codes/third-party-softwares-codes/t-sne/', BASE_PATH)));disp('Enabling t-SNE');        
     end

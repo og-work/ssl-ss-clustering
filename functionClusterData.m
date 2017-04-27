@@ -31,9 +31,9 @@ if USE_SUBSET_OF_FEATURES
     %     clusteringModel = mode(a, 2);
 else
     for i = 1:inNUMBER_OF_CLASSES
-        clusteringModel.classClusterAssignment(i, 1) = mode(clusterAssignmentsOfData(inDatasetLabels == inClassLabels(i)));
+        clusteringModel.classClusterAssignment(inClassLabels(i), 1) = mode(clusterAssignmentsOfData(inDatasetLabels == inClassLabels(i)));
         % Number of samples per class
-        clusteringModel.classClusterAssignment(i, 2) = length(clusterAssignmentsOfData(inDatasetLabels == inClassLabels(i)));
+        clusteringModel.classClusterAssignment(inClassLabels(i), 2) = length(clusterAssignmentsOfData(inDatasetLabels == inClassLabels(i)));
     end
 end
 

@@ -25,6 +25,6 @@
 function outMappedVector = functionTestRegressor(inData, inRegressorFunction)
 
 for d = 1:length(inRegressorFunction)
-    outMappedVector(d, 1) = libsvmpredict(zeros(1, 1), double(inData), inRegressorFunction{d});
+    outMappedVector(d, 1) = svmpredict(zeros(1, 1), double(inData), inRegressorFunction{d});
 end
 
